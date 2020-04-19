@@ -9,142 +9,129 @@
     <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
     <script src="https://d3js.org/topojson.v2.min.js"></script>
 		<style type="text/css">
-      .counties {
-        fill: none;
+      #tooltip.hidden {
+        display: none;
       }
 
-      .states {
-        fill: none;
-        stroke: #fff;
-        stroke-linejoin: round;
+      #tooltip {
+        position: absolute;
+        width: 150px;
+        padding: 5px;
+        background-color: white;
+        border: solid gray 1px;
+        opacity: 0.6;
+        z-index:10;
       }
 		</style>
 		</head>
 		<body>
 		<div id="main"></div>
+    <div id="tooltip" class="hidden">
+      <p><span id="value">100</span></p>
+   	</div>
 
 		<script type="text/javascript">
       var bosJSON='https://gist.githubusercontent.com/cesandoval/09b2e39263c748fbcb84b927cecc7c46/raw/ab71d3638efd2545ec99c2651c6f2ddcea9d2a07/boston.json'
-      var bosData ="https://raw.githubusercontent.com/brookefzy/BigData2020/master/pset6/boston_311.csv"
+      var tweetData ="https://raw.githubusercontent.com/brookefzy/BigData2020/master/pset6/boston_311.csv"
 
       var width = 700
       var height = 580
-
-      var path = d3.geoPath()
 
       var svg = d3.select("body")
                   .append("svg")
                   .attr("width", width)
                   .attr("height", height)
 
-      //Append empty placeholder g element to the svg
-      //g will contain geometry elements
-      // var g = svg.append("g")
+      var albersProjection = d3.geoAlbers()
+          .scale( 190000)
+          .rotate([71.057, 0])
+          .center([0, 42.313])
+          .translate([width/2, height/2])
 
-      // var albersProjection = d3.geoAlbers()
-      //     .scale( 190000)
-      //     .rotate([71.057, 0])
-      //     .center([0, 42.313])
-      //     .translate([width/2, height/2])
+      var path = d3.geoPath()
+          .projection(albersProjection)
 
-      // d3.json(bosJSON).then(function(bosNeighbor){
-      //     //6. Bind the data to svg canvas
-      //     //Classic D3, select non-existent elements, bind the data, append the elements, and apply attributes
-      //     console.log(bosNeighbor)
-      //
-      //     g.selectAll("path")
-      //         .data(bosNeighbor.arcs)
-      //         .enter()
-      //         .append("path")
-      //         .attr("fill", "#ccc")
-      //         .attr("stroke", "#333")
-      //         .attr("d",path)
-      // })
+      var color = d3.scaleThreshold()
+          .domain(d3.range(0, 10))
+          .range(d3.schemePurples[9]);
 
-      d3.json(bosJSON).then(ready)
+      var tweetMap = d3.map();
+      var totMap = d3.map();
+      var promises = [
+                       d3.json(bosJSON),
+                       d3.csv(tweetData, function(d) { tweetMap.set(d.id, +d.twitter); }),
+                       d3.csv(tweetData, function(d) { totMap.set(d.id, +d.tot_count); })
+                       ]
 
-      function ready(bos) {
+      Promise.all(promises).then(ready)
+
+      function ready([bos]) {
         console.log(bos)
-          svg.append("g")
+        console.log(tweetMap)
+        console
+
+        svg.append("g")
               .selectAll("path")
               .data(topojson.feature(bos, bos.objects.boston_neigh).features)
               .enter()
               .append("path")
-              .style("fill","white")
-              .style("stroke","black")
+              .attr("fill", function(d) {
+                console.log(d);
+                return color(d.twitter = Math.log(1 + tweetMap.get(d.properties.OBJECTID)));
+              })
               .attr("d", path)
+              .on("mouseover", function(d) {
+         					 d3.select("#tooltip")
+           					 .style("left", d3.event.pageX + "px")
+           					 .style("top", d3.event.pageY + "px")
+           					 .select("#value")
+           					 .html("<p>Twitter reports in " + d.properties.Name + ": " +
+                       String((tweetMap.get(d.properties.OBJECTID)/totMap.get(d.properties.OBJECTID) * 100).toFixed(3)) +
+                       "% </p>")
+         			     d3.select("#tooltip").classed("hidden", false);
+         			 })
+         			 .on("mouseout", function() {
+         				   d3.select("#tooltip").classed("hidden", true);
+         			 })
               .append("title");
       }
 
+      var x = d3.scaleLinear()
+          .domain([1, 10])
+          .rangeRound([600, 860]);
 
-      // var unemployment = d3.map();
-      //
-      // var x = d3.scaleLinear()
-      //     .domain([1, 10])
-      //     .rangeRound([600, 860]);
-      //
-      // var color = d3.scaleThreshold()
-      //     .domain(d3.range(2, 10))
-      //     .range(d3.schemeBlues[9]);
-      //
-      // var g = svg.append("g")
-      //     .attr("class", "key")
-      //     .attr("transform", "translate(0,40)");
-      //
-      // g.selectAll("rect")
-      //     .data(color.range().map(function(d) {
-      //         d = color.invertExtent(d);
-      //         if (d[0] == null) d[0] = x.domain()[0];
-      //         if (d[1] == null) d[1] = x.domain()[1];
-      //         return d;
-      //     }))
-      //     .enter().append("rect")
-      //     .attr("height", 8)
-      //     .attr("x", function(d) { return x(d[0]); })
-      //     .attr("width", function(d) { return x(d[1]) - x(d[0]); })
-      //     .attr("fill", function(d) { return color(d[0]); });
-      //
-      // g.append("text")
-      //     .attr("class", "caption")
-      //     .attr("x", x.range()[0])
-      //     .attr("y", -6)
-      //     .attr("fill", "#000")
-      //     .attr("text-anchor", "start")
-      //     .attr("font-weight", "bold")
-      //     .text("Unemployment rate");
-      //
-      // g.call(d3.axisBottom(x)
-      // .tickSize(13)
-      // .tickFormat(function(x, i) { return i ? x : x + "%"; })
-      // .tickValues(color.domain()))
-      // .select(".domain")
-      // .remove();
-      //
-      // var promises = [
-      //                 d3.json(uscountyurl),
-      //                 d3.csv(unemploymenturl, function(d) { unemployment.set(d.id, +d.rate); })
-      //                 ]
-      //
-      // Promise.all(promises).then(ready)
-      //
-      // function ready([us]) {
-      //     console.log(us)
-      //     console.log(unemployment)
-      // svg.append("g")
-      //     .attr("class", "counties")
-      //     .selectAll("path")
-      //     .data(topojson.feature(us, us.objects.counties).features)
-      //     .enter().append("path")
-      //     .attr("fill", function(d) { return color(d.rate = unemployment.get(d.id)); })
-      //     .attr("d", path)
-      //     .append("title")
-      //     .text(function(d) { return d.rate + "%"; });
-      //
-      // svg.append("path")
-      //     .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
-      //     .attr("class", "states")
-      //     .attr("d", path);
-      // }
+      var g = svg.append("g")
+          .attr("class", "key")
+          .attr("transform", "translate(0,40)");
+
+      g.selectAll("rect")
+          .data(color.range().map(function(d) {
+              d = color.invertExtent(d);
+              if (d[0] == null) d[0] = x.domain()[0];
+              if (d[1] == null) d[1] = x.domain()[1];
+              return d;
+          }))
+          .enter().append("rect")
+          .attr("height", 8)
+          .attr("x", function(d) { return x(d[0]); })
+          .attr("width", function(d) { return x(d[1]) - x(d[0]); })
+          .attr("fill", function(d) { return color(d[0]); });
+
+      g.append("text")
+          .attr("class", "caption")
+          .attr("x", x.range()[0])
+          .attr("y", -6)
+          .attr("fill", "#000")
+          .attr("text-anchor", "start")
+          .attr("font-weight", "bold")
+          .text("Tweets per neighborhood (log scale)");
+
+      g.call(d3.axisBottom(x)
+      .tickSize(13)
+      .tickFormat(function(x, i) { return i ? x : x + "%"; })
+      .tickValues(color.domain()))
+      .select(".domain")
+      .remove();
 
 		</script>
 	</body>
