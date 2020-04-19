@@ -34,7 +34,7 @@
       var bosJSON='https://gist.githubusercontent.com/cesandoval/09b2e39263c748fbcb84b927cecc7c46/raw/ab71d3638efd2545ec99c2651c6f2ddcea9d2a07/boston.json'
       var tweetData ="https://raw.githubusercontent.com/brookefzy/BigData2020/master/pset6/boston_311.csv"
 
-      var width = 700
+      var width = 800
       var height = 580
 
       var svg = d3.select("body")
@@ -52,7 +52,7 @@
           .projection(albersProjection)
 
       var color = d3.scaleThreshold()
-          .domain(d3.range(0, 10))
+          .domain(d3.range(0, 9))
           .range(d3.schemePurples[9]);
 
       var tweetMap = d3.map();
@@ -97,12 +97,12 @@
       }
 
       var x = d3.scaleLinear()
-          .domain([1, 10])
-          .rangeRound([600, 860]);
+          .domain([0, 8])
+          .rangeRound([20, 300]);
 
       var g = svg.append("g")
           .attr("class", "key")
-          .attr("transform", "translate(0,40)");
+          .attr("transform", "translate(0,50)");
 
       g.selectAll("rect")
           .data(color.range().map(function(d) {
@@ -128,7 +128,7 @@
 
       g.call(d3.axisBottom(x)
       .tickSize(13)
-      .tickFormat(function(x, i) { return i ? x : x + "%"; })
+      .tickFormat(function(x, i) { return i ? x : x; })
       .tickValues(color.domain()))
       .select(".domain")
       .remove();
